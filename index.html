@@ -1,0 +1,504 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>稳家</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&text=稳家&display=swap">
+<style>
+/* Layout: one-screen phone app. Each screen = sticky header + scrolling body + (tab bar | one primary action). Hierarchy: one filled button per screen, secondary = outlined, tertiary = text link. */
+:root{
+  /* all text/background pairs below measure ≥ 4.5:1 (WCAG AA) in both themes */
+  --bg:#F3F5F4; --surface:#FFFFFF; --surface2:#EAF0ED; --fg:#17221F; --muted:#5B6A66; --line:#DCE3E0;
+  --accent:#176B5C; --accent-soft:#DDEFE9; --accent-fg:#FFFFFF;
+  --gold:#87580F; --gold-soft:#F6EBD3;
+  --ok:#17764D; --ok-soft:#DCF2E5; --warn:#9A5508; --warn-soft:#FBEBD2; --bad:#B4382E; --bad-soft:#F8DDDA;
+  /* motion tokens: enter 200ms decelerate, exit 140ms accelerate, press 120ms */
+  --t-enter:200ms cubic-bezier(.2,.8,.2,1); --t-exit:140ms cubic-bezier(.4,0,1,1); --t-press:120ms ease-out;
+  /* type scale 12 / 14 / 16 / 18 / 24 / 32 / 48 */
+  --fs-xs:12px; --fs-sm:14px; --fs-md:16px; --fs-lg:18px; --fs-xl:24px; --fs-2xl:32px; --fs-3xl:48px;
+  --tap:44px;
+  --shadow:0 1px 2px rgba(23,34,31,.05),0 4px 14px rgba(23,34,31,.05);
+  --font:-apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --brand:"Noto Serif SC","Songti SC","STSong",serif;
+  --r:16px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1614; --surface:#182220; --surface2:#22302C; --fg:#ECF1EF; --muted:#9AAAA4; --line:#2C3A36;
+  --accent:#4FB79F; --accent-soft:#1D3A33; --accent-fg:#0F1614; --gold:#E0B25C; --gold-soft:#3A2F17;
+  --ok:#5CCB8F; --ok-soft:#173627; --warn:#E2A04D; --warn-soft:#3A2A12; --bad:#EF8075; --bad-soft:#3D1F1C;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0F1614; --surface:#182220; --surface2:#22302C; --fg:#ECF1EF; --muted:#9AAAA4; --line:#2C3A36;
+  --accent:#4FB79F; --accent-soft:#1D3A33; --accent-fg:#0F1614; --gold:#E0B25C; --gold-soft:#3A2F17;
+  --ok:#5CCB8F; --ok-soft:#173627; --warn:#E2A04D; --warn-soft:#3A2A12; --bad:#EF8075; --bad-soft:#3D1F1C;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35); color-scheme:dark }
+
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:var(--fs-md);line-height:1.5;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;overflow:hidden;touch-action:manipulation}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;transition:opacity var(--t-press),background-color var(--t-press),transform var(--t-press)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button[disabled]{cursor:not-allowed}
+input,textarea{font:inherit;color:inherit;font-size:var(--fs-md)}
+input[readonly],textarea[readonly]{background:var(--surface2)!important;border-color:transparent!important;color:var(--fg)}
+/* pressed feedback: opacity / tint only, never layout */
+.btn:active,.fab:active{opacity:.75}
+.card.tap:active,.li:active,.cat:active,.role:active,.hero:active{opacity:.7}
+.tabbar button:active,.seg button:active,.opts button:active{opacity:.6}
+h1,h2,h3{margin:0;text-wrap:balance}
+.num{font-variant-numeric:tabular-nums}
+
+#app{height:100%;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+@media (min-width:600px){
+  body{display:flex;align-items:center;justify-content:center;background:#0D1210}
+  #app{width:402px;height:874px;max-height:100%;border-radius:46px;border:8px solid #1b1f1e;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+}
+.screen{flex:1;min-height:0;display:flex;flex-direction:column}
+/* screen transitions: forward slides in from the right, back slides in from the left, tab switch crossfades */
+.screen.anim-push{animation:push var(--t-enter) both}
+.screen.anim-pop{animation:pop var(--t-enter) both}
+.screen.anim-fade{animation:fade 150ms ease-out both}
+@keyframes push{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pop{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.hdr{display:flex;align-items:center;gap:8px;padding:8px 16px 8px;flex:0 0 auto;min-height:var(--tap)}
+.hdr .title{font-size:var(--fs-xl);font-weight:800;flex:1;min-width:0;letter-spacing:-.01em}
+.hdr.center .title{font-size:var(--fs-lg);font-weight:700;text-align:center}
+.hdr .back{width:var(--tap);height:var(--tap);display:grid;place-items:center;border-radius:50%;background:var(--surface);box-shadow:var(--shadow);font-size:24px;line-height:1;margin-left:-4px}
+.hdr .act{color:var(--accent);font-size:var(--fs-sm);font-weight:600;white-space:nowrap;min-height:var(--tap);padding:0 4px;display:inline-flex;align-items:center}
+.hdr .sp{width:var(--tap);flex:0 0 auto}
+.body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:4px 16px 24px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.body > *+*{margin-top:12px}
+.body.has-fab{padding-bottom:96px}
+.tabbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--surface);padding:4px 4px 4px}
+.tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:var(--fs-xs);color:var(--muted);min-height:48px;position:relative;text-align:center}
+.tabbar button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.on{color:var(--accent);font-weight:600}
+.badge{position:absolute;top:2px;right:calc(50% - 18px);background:var(--bad);color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;line-height:1.4}
+
+.card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.card.tap{width:100%;display:block}
+.card h3{font-size:var(--fs-lg);font-weight:700}
+.row{display:flex;align-items:center;gap:10px}
+.row.between{justify-content:space-between}
+.col{display:flex;flex-direction:column;gap:6px}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:var(--fs-sm)}
+.xs{font-size:var(--fs-xs)}
+.b{font-weight:700}
+.sec{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:0 2px}
+.sec h2{font-size:var(--fs-lg);font-weight:700}
+.link{font-size:var(--fs-sm);color:var(--accent);font-weight:600;min-height:var(--tap);display:inline-flex;align-items:center;padding:0 4px;margin:-10px -4px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:var(--fs-xs);font-weight:600;background:var(--surface2);color:var(--muted);white-space:nowrap;line-height:1.6}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.gold{background:var(--gold-soft);color:var(--gold)}
+.chip.acc{background:var(--accent-soft);color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:52px;padding:12px 16px;border-radius:14px;font-weight:700;font-size:var(--fs-md);background:var(--accent);color:var(--accent-fg);width:100%;text-align:center}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn.sm{min-height:var(--tap);padding:8px 16px;font-size:var(--fs-sm);width:auto;border-radius:12px}
+.btn[disabled]{opacity:.45}
+.btn.busy{opacity:.7;pointer-events:none}
+.btn.busy:before{content:"";width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:var(--fs-lg);color:#fff;flex:0 0 auto}
+.avatar.lg{width:64px;height:64px;font-size:var(--fs-xl)}
+.avatar.sm{width:36px;height:36px;font-size:var(--fs-sm)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface2);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.stat .v{font-size:var(--fs-lg);font-weight:700;line-height:1.3}
+.stat .k{font-size:var(--fs-xs);color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:var(--surface2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.list > *+*{border-top:1px solid var(--line)}
+.li{display:flex;gap:12px;align-items:center;padding:12px 0;width:100%;min-height:var(--tap)}
+button.li{padding:12px 0}
+.li:first-child{padding-top:0}.li:last-child{padding-bottom:0}
+button.li:first-child{padding-top:8px}button.li:last-child{padding-bottom:8px}
+.li .chev{color:var(--muted);font-size:var(--fs-lg)}
+.tag-ver{display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);padding:2px 8px;border-radius:8px;background:var(--ok-soft);color:var(--ok);font-weight:600;white-space:nowrap}
+.tag-self{display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--muted);font-weight:600;white-space:nowrap}
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;min-height:40px;border-radius:10px;font-size:var(--fs-sm);font-weight:600;color:var(--muted);text-align:center}
+.seg button.on{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+.field{display:flex;flex-direction:column;gap:8px}
+.field label{font-size:var(--fs-sm);color:var(--muted);font-weight:600}
+.field input,.field textarea{width:100%;min-height:var(--tap);padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.field textarea{min-height:80px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts button{min-height:var(--tap);padding:8px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-size:var(--fs-sm)}
+.opts button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700}
+.steps{display:flex;gap:6px}
+.steps i{flex:1;height:4px;border-radius:2px;background:var(--surface2)}
+.steps i.on{background:var(--accent)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal .dow{font-size:var(--fs-xs);color:var(--muted);padding:4px 0}
+.cal .d{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;font-size:var(--fs-sm);background:var(--surface2);gap:1px}
+.cal .d small{font-size:10px;line-height:1}
+.cal .d.work{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.cal .d.rest{background:var(--surface2);color:var(--muted)}
+.cal .d.sub{background:var(--gold-soft);color:var(--gold);font-weight:700}
+.cal .d.today{outline:2px solid var(--accent);outline-offset:-2px}
+.cal .d.pad{background:transparent}
+.legend{display:flex;gap:16px;font-size:var(--fs-xs);color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.tl{position:relative;padding-left:18px}
+.tl:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl > div{position:relative;padding:4px 0 12px}
+.tl > div:before{content:"";position:absolute;left:-17px;top:9px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
+.tl > div:last-child{padding-bottom:0}
+.hero{background:linear-gradient(140deg,var(--accent),#0F4F43);color:#fff;border-radius:20px;padding:16px;position:relative;overflow:hidden;width:100%;display:block}
+.hero .score{font-size:var(--fs-3xl);font-weight:800;line-height:1;letter-spacing:-.02em}
+.hero .lbl{font-size:var(--fs-sm);opacity:.9}
+.hero .pill{background:rgba(255,255,255,.22);padding:4px 12px;border-radius:999px;font-size:var(--fs-xs);font-weight:600;line-height:1.6}
+.brand{font-family:var(--brand);font-weight:700;letter-spacing:.04em}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cat{background:var(--surface);border-radius:var(--r);padding:12px 8px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;min-height:var(--tap)}
+.cat .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:0 0 auto}
+.cat .ic svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cat b{font-size:var(--fs-md);display:block;white-space:nowrap}.cat span{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap}
+.msg{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
+.msg .bub{max-width:78%;padding:10px 12px;border-radius:16px;background:var(--surface);box-shadow:var(--shadow);font-size:var(--fs-md)}
+.msg.me{flex-direction:row-reverse}
+.msg.me .bub{background:var(--accent);color:var(--accent-fg)}
+.sysmsg{text-align:center;font-size:var(--fs-xs);color:var(--muted);margin-top:12px}
+.sysmsg span{background:var(--surface2);padding:2px 10px;border-radius:999px}
+.notice{display:flex;gap:8px;padding:12px;border-radius:14px;background:var(--accent-soft);color:var(--accent);font-size:var(--fs-sm);align-items:flex-start;font-weight:500}
+.notice.warn{background:var(--warn-soft);color:var(--warn)}
+.notice.gold{background:var(--gold-soft);color:var(--gold)}
+.notice svg{flex:0 0 auto;margin-top:1px}
+.sticky-bottom{flex:0 0 auto;padding:8px 16px 12px;background:var(--bg);border-top:1px solid var(--line);display:flex;gap:12px;align-items:center}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
+.kv:first-child{border-top:0;padding-top:0}
+.kv:last-child{padding-bottom:0}
+.credit-row{display:flex;align-items:center;gap:10px}
+.credit-row .bar{flex:1}
+.splash{flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding:24px 20px 28px;background:linear-gradient(180deg,var(--accent) 0%,#0F4F43 100%);color:#fff}
+.splash .mark{font-family:var(--brand);font-size:64px;font-weight:700;line-height:1;letter-spacing:.06em}
+.splash .tag{font-size:var(--fs-lg);opacity:.92;margin-top:12px;max-width:22ch;line-height:1.5}
+.role{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:18px;padding:16px;display:flex;align-items:center;gap:12px;width:100%;color:#fff;min-height:var(--tap)}
+.role b{font-size:var(--fs-lg)}.role span{font-size:var(--fs-sm);opacity:.88;display:block}
+.role .arrow{margin-left:auto;font-size:var(--fs-xl);opacity:.8}
+#toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(8px);background:var(--fg);color:var(--bg);padding:12px 16px;border-radius:14px;font-size:var(--fs-sm);font-weight:600;opacity:0;transition:opacity var(--t-exit),transform var(--t-exit);pointer-events:none;max-width:84%;text-align:center;z-index:30}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);transition:opacity var(--t-enter),transform var(--t-enter)}
+#sheet{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;justify-content:flex-end}
+#sheet.show{display:flex}
+#sheet .dim{position:absolute;inset:0;background:rgba(0,0,0,.5);animation:fade var(--t-enter) both}
+#sheet .panel{position:relative;background:var(--surface);border-radius:22px 22px 0 0;padding:8px 16px 24px;max-height:80%;overflow:auto;display:flex;flex-direction:column;gap:12px;animation:sheetIn var(--t-enter) both}
+@keyframes sheetIn{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+#sheet .panel h3{font-size:var(--fs-xl);padding-right:48px}
+#sheet .handle{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto}
+#sheet .close{position:absolute;top:8px;right:8px;width:var(--tap);height:var(--tap);display:grid;place-items:center;border-radius:50%;font-size:var(--fs-xl);color:var(--muted);background:var(--surface2)}
+#sheet .panel .btn{margin-top:4px}
+.ver-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ver{display:flex;gap:8px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--surface2);font-size:var(--fs-sm)}
+.ver .dot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-xs);font-weight:700;flex:0 0 auto;background:var(--ok-soft);color:var(--ok)}
+.fab{position:absolute;right:16px;bottom:88px;background:var(--accent);color:var(--accent-fg);border-radius:999px;min-height:52px;padding:12px 20px;font-weight:700;font-size:var(--fs-md);box-shadow:0 8px 20px rgba(23,107,92,.35);z-index:5;display:flex;gap:6px;align-items:center}
+.price{font-size:var(--fs-lg);font-weight:800}
+.price span{font-size:var(--fs-xs);font-weight:500;color:var(--muted)}
+.name{font-size:var(--fs-lg);font-weight:700}
+.demo-hint{font-size:var(--fs-xs);color:var(--muted);text-align:center;padding-top:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app" role="application" aria-label="稳家 Demo">
+  <div id="view" class="screen"></div>
+  <div id="sheet"><div class="dim" data-act="sheet-close"></div><div class="panel" id="sheet-panel"></div></div>
+  <div id="toast" role="status"></div>
+</div>
+
+<script>
+/* ---------- 示例数据（北京，非真实人物） ---------- */
+const AUNTS=[
+ {id:'a1',name:'张秀兰',age:46,home:'河北保定',cat:'育儿嫂',grade:'金牌',score:92,credit:812,pay:'9,500–11,000',avail:'11 月 1 日起',contracts:3,avgMonths:16,renew:'2/3',color:'#2F7F6D',
+  skills:[['婴儿护理',95],['辅食制作',90],['早教互动',88],['家务整理',92],['沟通表达',94]],
+  certs:[['育婴员（四级）国家职业资格','ver'],['母婴护理专项职业能力证书','ver'],['早教指导师（培训机构颁发）','self']],
+  history:[['2025.03–2026.09','朝阳 吴女士家','宝宝 2 个月带到 20 个月 · 评 4.9','18 个月'],['2023.10–2025.02','海淀 周先生家','双胞胎，续签一次 · 评 4.8','16 个月'],['2022.06–2023.08','丰台 李女士家','合同到期 · 评 4.7','14 个月']],
+  reviews:[['吴女士','4.9','辅食做得用心，宝宝体重曲线一直正常。离开是因为我们出国。'],['周先生','4.8','双胞胎夜里轮流哭她也不急，和老人处得好。']],
+  intro:'做育儿嫂 7 年，带过 5 个宝宝，最长一家 18 个月。会辅食和简单早教。'},
+ {id:'a2',name:'李春梅',age:42,home:'河南周口',cat:'育儿嫂',grade:'A',score:88,credit:776,pay:'8,000–9,000',avail:'即刻',contracts:2,avgMonths:11,renew:'1/2',color:'#6C6F9A',
+  skills:[['婴儿护理',90],['辅食制作',85],['早教互动',84],['家务整理',90],['沟通表达',88]],
+  certs:[['育婴员（四级）国家职业资格','ver'],['健康证 2026-08','ver']],
+  history:[['2025.06–2026.08','西城 林女士家','宝宝 4 个月起 · 评 4.8','14 个月'],['2024.09–2025.05','朝阳 王先生家','合同到期 · 评 4.6','8 个月']],
+  reviews:[['林女士','4.8','踏实爱干净，宝宝很黏她。']],intro:'带过两个宝宝，习惯每天写育儿日志。'},
+ {id:'a3',name:'陈玉华',age:51,home:'山东德州',cat:'养老照护',grade:'金牌',score:95,credit:835,pay:'8,000–9,000',avail:'即刻',contracts:4,avgMonths:20,renew:'3/4',color:'#9A6B3C',
+  skills:[['失能照护',96],['用药提醒',94],['营养餐',92],['康复陪护',93],['情绪陪伴',95]],
+  certs:[['长期照护师（初级）','ver'],['养老护理员（四级）','ver'],['健康证 2026-09','ver']],
+  history:[['2024.01–2026.09','海淀 陈先生家','80 岁半自理老人，骨折康复期陪护 · 评 5.0','32 个月'],['2022.03–2023.12','东城 赵女士家','合同到期 · 评 4.9','21 个月']],
+  reviews:[['陈先生','5.0','母亲摔伤后的康复陪护全靠她，翻身、按摩、记录都规范。'],['赵女士','4.9','父亲认知下降也不嫌烦。']],intro:'照护老人 9 年，做过医院陪护，会基础康复陪护和血压血糖记录。'},
+ {id:'a4',name:'刘芳',age:38,home:'甘肃天水',cat:'育儿嫂',grade:'B',score:81,credit:702,pay:'7,500–8,500',avail:'即刻',contracts:1,avgMonths:6,renew:'0/1',color:'#8A5A7A',
+  skills:[['婴儿护理',84],['辅食制作',78],['早教互动',76],['家务整理',88],['沟通表达',80]],
+  certs:[['育婴员（五级）','ver'],['催乳师（培训机构颁发）','self']],
+  history:[['2026.01–2026.07','通州 孙女士家','雇主换城市提前结束 · 评 4.5','6 个月']],
+  reviews:[['孙女士','4.5','干活利索，辅食品种可以再丰富些。']],intro:'入行两年，愿意学，可以接受平台安排的提升培训。'},
+ {id:'a5',name:'赵丽',age:45,home:'河北邯郸',cat:'养老照护',grade:'A',score:89,credit:768,pay:'7,500–8,500',avail:'10 月 20 日起',contracts:2,avgMonths:13,renew:'1/2',color:'#3C7A9A',
+  skills:[['失能照护',88],['用药提醒',92],['营养餐',86],['康复陪护',85],['情绪陪伴',90]],
+  certs:[['养老护理员（四级）','ver'],['健康证 2026-07','ver']],
+  history:[['2025.02–2026.09','朝阳 何先生家','白班照护糖尿病老人 · 评 4.8','19 个月'],['2024.03–2024.10','昌平 刘女士家','老人入院结束 · 评 4.7','7 个月']],
+  reviews:[['何先生','4.8','血糖记录每天拍照发群，很放心。']],intro:'做过社区养老服务中心 3 年，熟悉慢病老人的日常。'},
+ {id:'a6',name:'周红',age:40,home:'山东临沂',cat:'育儿嫂',grade:'A',score:90,credit:790,pay:'8,500–9,500',avail:'即刻',contracts:3,avgMonths:12,renew:'2/3',color:'#5B7F3C',
+  skills:[['婴儿护理',92],['辅食制作',88],['早教互动',90],['家务整理',86],['沟通表达',91]],
+  certs:[['育婴员（四级）国家职业资格','ver'],['母婴护理专项职业能力证书','ver']],
+  history:[['2025.04–2026.09','海淀 郑女士家','评 4.9','17 个月'],['2024.01–2025.03','石景山 高先生家','评 4.7','14 个月'],['2023.05–2023.11','大兴 马女士家','评 4.6','6 个月']],
+  reviews:[['郑女士','4.9','早教做得好，宝宝 1 岁会说十几个词。']],intro:'幼师转行，擅长和 1–3 岁宝宝互动。'},
+ {id:'a7',name:'孙桂香',age:48,home:'河北张家口',cat:'住家保洁',grade:'金牌',score:93,credit:808,pay:'7,000–8,500',avail:'即刻',contracts:3,avgMonths:18,renew:'3/3',color:'#4A6FA5',
+  skills:[['清洁整理',96],['家常烹饪',92],['衣物洗护',94],['采买记账',90],['沟通表达',91]],
+  certs:[['家政服务员（四级）国家职业资格','ver'],['中式烹调师（五级）','ver'],['健康证 2026-09','ver']],
+  history:[['2024.06–2026.09','朝阳 望京 刘先生家','四口之家住家，续签两次 · 评 5.0','27 个月'],['2022.09–2024.05','海淀 万柳 周女士家','别墅保洁 + 三餐 · 评 4.9','20 个月'],['2021.11–2022.08','东城 吴先生家','合同到期 · 评 4.8','9 个月']],
+  reviews:[['刘先生','5.0','家里永远是整齐的，三餐口味稳定，采买账目每周发一次。'],['周女士','4.9','别墅三层打理得很好，从不需要我们提醒。']],intro:'做住家 8 年，会京鲁家常菜，习惯每周给雇主发采买清单。'},
+ {id:'a8',name:'王丽华',age:44,home:'山西运城',cat:'住家保洁',grade:'A',score:87,credit:771,pay:'6,500–7,500',avail:'10 月 25 日起',contracts:2,avgMonths:12,renew:'1/2',color:'#7A6A4A',
+  skills:[['清洁整理',90],['家常烹饪',85],['衣物洗护',88],['采买记账',84],['沟通表达',86]],
+  certs:[['家政服务员（四级）国家职业资格','ver'],['健康证 2026-08','ver'],['收纳整理师（培训机构颁发）','self']],
+  history:[['2025.05–2026.10','西城 月坛 张女士家','三居室住家 · 评 4.8','17 个月'],['2024.08–2025.03','丰台 赵先生家','雇主搬家结束 · 评 4.6','7 个月']],
+  reviews:[['张女士','4.8','干净利索，会做面食，老人孩子都吃得惯。']],intro:'擅长面食和收纳，愿意学西餐。'}
+];
+const CURRENT={name:'王桂芳',cat:'育儿嫂',day:47,color:'#2F7F6D',pay:9500};
+const EMPLOYERS=[
+ {id:'e1',name:'徐女士',area:'朝阳 望京',cat:'育儿嫂',need:'宝宝 8 个月 · 住家 · 周日休',pay:9500,credit:782,grade:'A',months:12,prevRating:'4.9',tags:['准时付薪 12 个月','尊重休息时间'],note:'上一位阿姨评价：讲道理，加班按平台记录结算。',color:'#2F7F6D'},
+ {id:'e2',name:'陈先生',area:'海淀 中关村',cat:'养老照护',need:'父亲 78 岁 半自理 · 白班 · 双休',pay:7800,credit:760,grade:'A',months:9,prevRating:'4.8',tags:['准时付薪 9 个月','提供午餐'],note:'家中另有保洁阿姨，照护工作集中在老人本人。',color:'#3C7A9A'},
+ {id:'e3',name:'林女士',area:'西城 金融街',cat:'育儿嫂',need:'双胞胎 3 个月 · 住家 · 周日休',pay:12000,credit:655,grade:'B',months:0,prevRating:'—',tags:['首次雇佣','已预付 1 个月保证金'],note:'首次通过平台雇佣，保证金已托管，工资由平台代发。',color:'#8A5A7A'},
+ {id:'e4',name:'黄先生',area:'丰台 方庄',cat:'养老照护',need:'母亲 82 岁 失能卧床 · 住家',pay:9000,credit:540,grade:'C',months:3,prevRating:'3.6',tags:['近 6 个月 2 次提前解约','需预付 1 个月'],note:'该雇主近 6 个月两次提前解约，匹配前平台客服会先确认工作边界。',color:'#9A6B3C'},
+ {id:'e5',name:'刘先生',area:'朝阳 望京',cat:'住家保洁',need:'四口之家 三居室 · 住家 · 三餐 + 保洁 · 周日休',pay:7500,credit:805,grade:'A',months:27,prevRating:'5.0',tags:['准时付薪 27 个月','独立房间'],note:'上一位阿姨因回乡结束，雇主续签过两次。',color:'#4A6FA5'},
+ {id:'e6',name:'周女士',area:'海淀 万柳',cat:'住家保洁',need:'别墅三层 · 住家 · 保洁 + 晚餐 · 双休',pay:8500,credit:730,grade:'A',months:6,prevRating:'4.7',tags:['准时付薪 6 个月','有钟点工分担'],note:'另有每周两次的钟点工负责深度清洁，住家阿姨以日常整理和晚餐为主。',color:'#7A6A4A'}
+];
+const CHATS=[
+ {id:'c1',who:'稳家客服',color:'#176B5C',last:'10/18 的替班已确认：李春梅（A 级）',time:'09:40',sys:true},
+ {id:'c2',who:'王桂芳（在岗）',color:'#2F7F6D',last:'今天辅食加了南瓜泥，宝宝吃了小半碗',time:'昨天'},
+ {id:'c3',who:'张秀兰',color:'#2F7F6D',last:'11 月初可以上户，方便先视频面试吗？',time:'周四'}
+];
+const CHATS_A=[
+ {id:'c1',who:'稳家客服',color:'#176B5C',last:'10/17–18 请假已通过，替班已安排',time:'09:40',sys:true},
+ {id:'c2',who:'徐女士（雇主）',color:'#2F7F6D',last:'路上注意安全，车票我们报销',time:'昨天'},
+ {id:'c3',who:'林女士',color:'#8A5A7A',last:'看了您的档案，想约个视频面试',time:'周四'}
+];
+
+/* ---------- state & router ---------- */
+const S={role:null,tab:'home',stack:[],invited:{},applied:{},leave:false,subOk:false,form:{cat:'育儿嫂',step:0,kid:'6–12 个月',live:'住家',rest:'周日休',pay:'9,000–10,000'},filter:'全部',msgsSeen:false};
+/* navigation: a stack per role; scroll position is saved on every tab root so Back restores it (HIG state-preservation) */
+const scrollMemo={};
+function memoScroll(){const b=document.querySelector('#view .body');if(b)scrollMemo[curKey()]=b.scrollTop;}
+function curKey(){return S.stack.length?'s'+S.stack.length+(S.stack[S.stack.length-1].view):S.role+':'+S.tab;}
+let anim='';
+function go(view,params){memoScroll();S.stack.push({view,params:params||{}});anim='push';pushHist();render();}
+function back(){if(!S.stack.length)return;S.stack.pop();anim='pop';render();}
+function setTab(t){if(S.tab===t&&!S.stack.length)return;memoScroll();S.tab=t;S.stack=[];anim='fade';if(t==='msgs')S.msgsSeen=true;render();}
+/* hardware / browser back pops our stack instead of leaving the page */
+let histDepth=0;
+function pushHist(){try{history.pushState({d:++histDepth},'');}catch(e){}}
+window.addEventListener('popstate',()=>{if(document.getElementById('sheet').classList.contains('show')){closeSheet();return;}if(S.stack.length){S.stack.pop();anim='pop';render();}});
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),3000);}
+function sheet(html){document.getElementById('sheet-panel').innerHTML='<div class="handle"></div><button class="close" data-act="sheet-close" aria-label="关闭">×</button>'+html;document.getElementById('sheet').classList.add('show');const f=document.querySelector('#sheet-panel h3');if(f){f.tabIndex=-1;f.focus();}}
+function closeSheet(){document.getElementById('sheet').classList.remove('show');}
+/* async action feedback: button shows a spinner and ignores taps until done (loading-buttons) */
+function busy(btn,ms,then){btn.classList.add('busy');btn.setAttribute('aria-busy','true');setTimeout(()=>{btn.classList.remove('busy');btn.removeAttribute('aria-busy');then();},ms);}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ini=n=>n.slice(0,1);
+
+/* ---------- icons ---------- */
+const I={
+ home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></svg>',
+ find:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+ cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+ msg:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.4A8 8 0 1 1 21 12z"/></svg>',
+ me:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+ baby:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 10h.01M15 10h.01M9 15c1 1 5 1 6 0M12 4v-1"/></svg>',
+ elder:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="6" r="3"/><path d="M7 21v-8a3 3 0 0 1 3-3h1l3 4v7M17 11v10"/></svg>',
+ clean:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/><path d="M9 20v-5h6v5"/><path d="M12 4V2"/></svg>',
+ shield:'<svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>'
+};
+const CATS=['育儿嫂','养老照护','住家保洁'];
+const CAT_ICON={'育儿嫂':I.baby,'养老照护':I.elder,'住家保洁':I.clean};
+const PAY_REF={'育儿嫂':['8,000–11,000',['8,000–9,000','9,000–10,000','10,000–12,000']],'养老照护':['7,000–9,000',['7,000–7,800','7,800–8,500','8,500–9,500']],'住家保洁':['6,500–8,500',['6,500–7,000','7,000–7,800','7,800–8,500']]};
+const CAT_Q={'育儿嫂':['宝宝月龄',['0–6 个月','6–12 个月','1–3 岁']],'养老照护':['老人情况',['自理','半自理','失能']],'住家保洁':['房屋情况',['两居室','三居室','别墅 / 复式']]};
+const CAT_JOB={'育儿嫂':'宝宝日常护理、辅食、早教互动；宝宝衣物与房间整理。不含全家做饭和大扫除。','养老照护':'老人起居照护、用药提醒、三餐、陪同散步与就医；老人房间整理。不含全家保洁。','住家保洁':'全屋日常清洁整理、三餐、衣物洗护、日常采买记账。不含带孩子与照护老人。'};
+const TABS={employer:[['home','首页',I.home],['find','找阿姨',I.find],['sched','排班',I.cal],['msgs','消息',I.msg],['me','我的',I.me]],
+            aunt:[['home','工作台',I.home],['find','找雇主',I.find],['sched','排班',I.cal],['msgs','消息',I.msg],['me','我的',I.me]]};
+
+/* ---------- shared pieces ---------- */
+function hdr(title,o={}){return `<header class="hdr ${o.back?'center':''}">${o.back?'<button class="back" data-act="back" aria-label="返回">‹</button>':''}<h1 class="title">${title}</h1>${o.act?`<button class="act" data-act="${o.act[1]}">${o.act[0]}</button>`:o.back?'<span class="sp"></span>':''}</header>`;}
+function tabbar(){return `<nav class="tabbar" aria-label="主导航">${TABS[S.role].map(([k,l,ic])=>`<button class="${S.tab===k?'on':''}" data-act="tab" data-tab="${k}" aria-current="${S.tab===k?'page':'false'}" ${k==='msgs'&&!S.msgsSeen?'aria-label="消息，2 条未读"':''}>${ic}<span>${l}</span>${k==='msgs'&&!S.msgsSeen?'<span class="badge" aria-hidden="true">2</span>':''}</button>`).join('')}</nav>`;}
+function gradeChip(g){return g==='金牌'?'<span class="chip gold">金牌</span>':g==='A'?'<span class="chip acc">A 级</span>':g==='B'?'<span class="chip">B 级</span>':'<span class="chip bad">C 级</span>';}
+function creditChip(g){return g==='A'?'<span class="chip ok">信用 A</span>':g==='B'?'<span class="chip warn">信用 B</span>':'<span class="chip bad">信用 C</span>';}
+function auntCard(a){const inv=S.invited[a.id];return `<button class="card tap" data-act="aunt" data-id="${a.id}">
+ <div class="row"><div class="avatar" style="background:${a.color}">${ini(a.name)}</div><div class="grow">
+  <div class="row"><span class="name">${a.name}</span>${gradeChip(a.grade)}<span class="tag-ver">✓ 已核验</span></div>
+  <div class="small muted">${a.age} 岁 · ${a.home} · ${a.cat}</div></div></div>
+ <div class="row between" style="margin-top:12px"><span class="small muted">${a.contracts} 份合同 · 平均在岗 <b class="num" style="color:var(--fg)">${a.avgMonths} 个月</b></span><span class="price num">¥${a.pay}<span>/月</span></span></div>
+ <div class="row between" style="margin-top:6px"><span class="xs muted">${a.avail}可上户</span>${inv?'<span class="chip acc">已发起互选</span>':''}</div>
+</button>`;}
+
+/* ---------- 启动 ---------- */
+function vSplash(){return `<div class="splash">
+ <div class="mark">稳家</div>
+ <div class="tag">长期阿姨的双向信用平台</div>
+ <div class="col" style="gap:10px;margin-top:28px">
+  <button class="role" data-act="role" data-role="employer"><div class="avatar" style="background:rgba(255,255,255,.2)">雇</div><div><b>我是雇主</b><span>找已核验的育儿嫂、养老照护阿姨</span></div><span class="arrow">›</span></button>
+  <button class="role" data-act="role" data-role="aunt"><div class="avatar" style="background:rgba(255,255,255,.2)">姨</div><div><b>我是阿姨</b><span>看雇主信用，接长期稳定的活</span></div><span class="arrow">›</span></button>
+ </div>
+ <div class="xs" style="opacity:.7;margin-top:20px">Demo · 北京 · 示例数据</div>
+</div>`;}
+
+/* ---------- 雇主端 ---------- */
+function vEHome(){return hdr('<span class="brand">稳家</span> <span class="small muted" style="font-weight:500">北京</span>',{act:['切换角色','switch']})+`<div class="body has-fab">
+ <button class="hero" data-act="tab" data-tab="me"><div class="row between"><div><div class="lbl">我的雇主信用</div><div class="score num">782</div></div><div class="col" style="align-items:flex-end;gap:6px"><span class="pill">A 级 · 免保证金</span><span class="pill">准时付薪 12 个月</span></div></div></button>
+ <div class="cats">${CATS.map(c=>`<button class="cat" data-act="find-cat" data-cat="${c}"><div class="ic">${CAT_ICON[c]}</div><div><b>${c}</b><span>${AUNTS.filter(a=>a.cat===c).length} 位可上户</span></div></button>`).join('')}</div>
+ <div class="sec"><h2>当前合同</h2><button class="link" data-act="tab" data-tab="sched">排班与账单 ›</button></div>
+ <div class="card"><div class="row"><div class="avatar" style="background:${CURRENT.color}">王</div><div class="grow"><div class="row"><span class="name">${CURRENT.name}</span><span class="chip ok">在岗第 ${CURRENT.day} 天</span></div><div class="small muted">育儿嫂 · 周日休 · 10 月已在岗 9 天</div></div></div>
+  <div class="notice gold" style="margin-top:12px">${I.shield}<div>10/17–18 阿姨请假，替班阿姨李春梅已确认</div></div></div>
+ <div class="sec"><h2>已核验 · 近期可上户</h2><button class="link" data-act="tab" data-tab="find">全部 ›</button></div>
+ ${auntCard(AUNTS[0])}${auntCard(AUNTS[2])}${auntCard(AUNTS[6])}
+</div>`+`<button class="fab" data-act="post">＋ 发布需求</button>`+tabbar();}
+
+function vEFind(){const cats=['全部',...CATS];const list=AUNTS.filter(a=>S.filter==='全部'||a.cat===S.filter);return hdr('找阿姨')+`<div class="body">
+ <div class="seg">${cats.map(c=>`<button class="${S.filter===c?'on':''}" data-act="filter" data-f="${c}">${c}</button>`).join('')}</div>
+ <div class="xs muted" style="padding:0 2px">${list.length} 位 · 全部通过 4 项核验 · 按平台履约记录排序</div>
+ ${list.map(auntCard).join('')}
+</div>`+tabbar();}
+
+function vAunt(p){const a=AUNTS.find(x=>x.id===p.id);const inv=S.invited[a.id];return hdr('阿姨档案',{back:true,act:['发消息','chat-c3']})+`<div class="body">
+ <div class="card"><div class="row"><div class="avatar lg" style="background:${a.color}">${ini(a.name)}</div><div class="grow"><div class="row"><span class="name" style="font-size:var(--fs-xl)">${a.name}</span>${gradeChip(a.grade)}</div><div class="small muted">${a.age} 岁 · ${a.home} · ${a.cat}</div></div><div class="col" style="align-items:flex-end;gap:0"><b class="num" style="font-size:var(--fs-xl)">${a.credit}</b><span class="xs muted">阿姨信用</span></div></div>
+  <div class="ver-grid" style="margin-top:14px"><div class="ver"><span class="dot">✓</span>实名认证</div><div class="ver"><span class="dot">✓</span>公安核查</div><div class="ver"><span class="dot">✓</span>健康证 2026-08</div><div class="ver"><span class="dot">✓</span>实操考核 ${a.score} 分</div></div></div>
+ <div class="card"><h3>平台履约</h3><div class="grid3" style="margin:12px 0"><div class="stat"><span class="v num">${a.contracts}</span><span class="k">合同</span></div><div class="stat"><span class="v num">${a.avgMonths}<span class="small"> 月</span></span><span class="k">平均在岗</span></div><div class="stat"><span class="v num">${a.renew}</span><span class="k">雇主续约</span></div></div>
+  <div class="tl">${a.history.map(([t,w,d,m])=>`<div><div class="row between"><b class="small">${w}</b><span class="xs muted num">${t}</span></div><div class="small muted">${d} · ${m}</div></div>`).join('')}</div></div>
+ <div class="card"><h3>实操考核 ${a.score} 分</h3><div class="col" style="margin-top:12px;gap:9px">${a.skills.map(([k,v])=>`<div class="credit-row"><span class="small" style="width:64px">${k}</span><div class="bar"><i style="width:${v}%"></i></div><b class="small num" style="width:28px;text-align:right">${v}</b></div>`).join('')}</div></div>
+ <div class="card"><h3>证书与自述</h3><div class="list" style="margin-top:10px">${a.certs.map(([c,v])=>`<div class="li"><span class="grow small">${c}</span>${v==='ver'?'<span class="tag-ver">✓ 已核验</span>':'<span class="tag-self">自述</span>'}</div>`).join('')}<div class="li"><span class="grow small muted">${a.intro}</span><span class="tag-self">自述</span></div></div></div>
+ <div class="card"><h3>雇主评价</h3><div class="list" style="margin-top:10px">${a.reviews.map(([n,r,t])=>`<div class="li" style="align-items:flex-start"><div class="avatar sm" style="background:var(--surface2);color:var(--fg)">${ini(n)}</div><div class="grow"><div class="row"><b class="small">${n}</b><span class="chip gold num">${r}</span></div><div class="small muted">${t}</div></div></div>`).join('')}</div></div>
+ <div class="demo-hint">期望月薪 ¥${a.pay} · ${a.avail}可上户</div>
+</div><div class="sticky-bottom"><button class="btn" data-act="invite" data-id="${a.id}" ${inv?'disabled':''}>${inv?'已发起互选，等待回应':'发起互选'}</button></div>`;}
+
+function vPost(){const f=S.form;const step=f.step;const steps=['家庭情况','工作内容','预算'];const opt=(key,vals)=>`<div class="opts">${vals.map(v=>`<button class="${f[key]===v?'on':''}" data-act="opt" data-k="${key}" data-v="${v}">${v}</button>`).join('')}</div>`;
+ let body='';
+ if(step===0)body=`<div class="field"><label>品类</label>${opt('cat',CATS)}</div>
+  <div class="field"><label>${CAT_Q[f.cat][0]}</label>${opt('kid',CAT_Q[f.cat][1])}</div>
+  <div class="field"><label>住址（匹配成功后才向阿姨展示）</label><input id="f-addr" value="朝阳区 望京花园" readonly></div>`;
+ if(step===1)body=`<div class="field"><label>住家 / 白班</label>${opt('live',['住家','白班','夜班'])}</div>
+  <div class="field"><label>休息</label>${opt('rest',['周日休','双休','月休 4 天'])}</div>
+  <div class="field"><label>工作内容（写进合同）</label><textarea id="f-job" readonly>${CAT_JOB[f.cat]}</textarea></div>`;
+ if(step===2)body=`<div class="field"><label>月薪（北京${f.cat}参考 ${PAY_REF[f.cat][0]}）</label>${opt('pay',PAY_REF[f.cat][1])}</div>
+  <div class="card"><div class="kv"><span>介绍费</span><b>¥0</b></div><div class="kv"><span>平台服务费</span><b>在岗工资的 8%</b></div><div class="kv"><span>保证金</span><b>免（信用 782）</b></div><div class="kv"><span>工资</span><b>平台代发，按在岗天数</b></div></div>`;
+ return hdr('发布需求',{back:true})+`<div class="body"><div class="steps">${steps.map((s,i)=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div><div class="small muted">${step+1} / 3 · ${steps[step]}</div>${body}</div>
+ <div class="sticky-bottom">${step>0?'<button class="btn ghost" style="flex:1" data-act="step" data-d="-1">上一步</button>':''}<button class="btn" style="flex:2" data-act="${step<2?'step':'submit'}" data-d="1">${step<2?'下一步':'发布需求'}</button></div>`;}
+
+function calendar(subDays,subLabel,extra){const days=[];const first=(new Date(2026,9,1).getDay()+6)%7;for(let i=0;i<first;i++)days.push('<div class="d pad"></div>');
+ for(let d=1;d<=31;d++){const dow=new Date(2026,9,d).getDay();let cls='work',lab='在岗';if(dow===0){cls='rest';lab='休';}if(subDays.includes(d)){cls='sub';lab=subLabel;}if(extra&&extra.days.includes(d)){cls='sub';lab=extra.label;}if(d===11)cls+=' today';days.push(`<div class="d ${cls}"><span class="num">${d}</span><small>${lab}</small></div>`);}
+ return `<div class="cal">${['一','二','三','四','五','六','日'].map(d=>`<div class="dow">${d}</div>`).join('')}${days.join('')}</div>`;}
+
+function vESched(){return hdr('排班与账单')+`<div class="body">
+ <div class="card"><div class="row between"><h3>10 月 · ${CURRENT.name}</h3><span class="chip acc">周日休</span></div>
+  <div style="margin-top:12px">${calendar([17,18],'替班')}</div>
+  <div class="legend" style="margin-top:12px"><span><i style="background:var(--accent-soft)"></i>在岗</span><span><i style="background:var(--surface2)"></i>休息</span><span><i style="background:var(--gold-soft)"></i>替班</span></div></div>
+ <div class="card"><div class="row"><div class="avatar" style="background:${AUNTS[1].color}">李</div><div class="grow"><div class="row"><span class="name">李春梅</span><span class="chip acc">A 级</span><span class="tag-ver">✓ 已核验</span></div><div class="small muted">10/17–18 替班 · ¥400/天 · 已读合同</div></div><span class="chip ok">已确认</span></div></div>
+ <div class="card"><h3>10 月账单</h3><div style="margin-top:10px"><div class="kv"><span>王桂芳 在岗 26 天</span><b class="num">¥9,500</b></div><div class="kv"><span>替班 2 天</span><b class="num">¥800</b></div><div class="kv"><span>平台服务费 8%</span><b class="num">¥824</b></div><div class="kv"><span>保险</span><b class="num">¥60</b></div><div class="kv" style="font-size:var(--fs-lg)"><span class="b">合计</span><b class="num">¥11,184</b></div></div>
+  <div class="xs muted" style="margin-top:10px">按实际在岗天数结算，每月 5 日平台代发工资</div></div>
+ <button class="card tap" data-act="soon"><div class="row between"><span class="b">在岗记录与育儿日志</span><span class="muted">›</span></div><div class="small muted" style="margin-top:4px">10/10 07:02 打卡 · 晨奶 180ml · 户外 40 分钟</div></button>
+</div>`+tabbar();}
+
+function vMsgs(){const list=S.role==='employer'?CHATS:CHATS_A;return hdr('消息')+`<div class="body"><div class="card" style="padding:6px 16px"><div class="list">${list.map(c=>`<button class="li" data-act="chat" data-id="${c.id}"><div class="avatar" style="background:${c.color}">${c.sys?'稳':ini(c.who)}</div><div class="grow"><div class="row between"><b>${c.who}</b><span class="xs muted">${c.time}</span></div><div class="small muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.last}</div></div></button>`).join('')}</div></div></div>`+tabbar();}
+
+function vChat(p){const list=S.role==='employer'?CHATS:CHATS_A;const c=list.find(x=>x.id===p.id)||list[0];let m='';
+ if(c.sys)m=`<div class="sysmsg"><span>今天 09:40</span></div><div class="msg"><div class="avatar sm" style="background:${c.color}">稳</div><div class="bub">${S.role==='employer'?'王桂芳申请 10/17–18 请假回乡。已匹配 A 级替班阿姨李春梅（实操 88 分），已读合同工作内容。替班 ¥400/天，计入 10 月账单。':'您 10/17–18 的请假已通过。替班阿姨李春梅 10/17 早 8 点到岗交接，10/19 您回岗打卡即可。车票可在「我的」上传报销。'}</div></div><div class="msg me"><div class="bub">好的，收到。</div></div>`;
+ else if(c.id==='c2')m=S.role==='employer'?`<div class="sysmsg"><span>昨天 18:20</span></div><div class="msg"><div class="avatar sm" style="background:${c.color}">王</div><div class="bub">今天辅食加了南瓜泥，宝宝吃了小半碗，下午户外 40 分钟。</div></div><div class="msg me"><div class="bub">辛苦了，我们 7 点到家。</div></div>`:`<div class="sysmsg"><span>昨天 18:40</span></div><div class="msg me"><div class="bub">周六一早回乡，周日晚上回来，周一正常上岗。</div></div><div class="msg"><div class="avatar sm" style="background:${c.color}">徐</div><div class="bub">路上注意安全，车票我们报销。</div></div>`;
+ else m=S.role==='employer'?`<div class="sysmsg"><span>周四 20:05</span></div><div class="msg"><div class="avatar sm" style="background:${c.color}">张</div><div class="bub">看到您的需求了。11 月初可以上户，方便先视频面试吗？</div></div><div class="msg me"><div class="bub">可以，周六上午 10 点？</div></div><div class="msg"><div class="avatar sm" style="background:${c.color}">张</div><div class="bub">好的，到时候 App 里视频。</div></div><div class="sysmsg"><span>面试在稳家内进行并留档</span></div>`:`<div class="sysmsg"><span>周四 20:05</span></div><div class="msg"><div class="avatar sm" style="background:${c.color}">林</div><div class="bub">看了您的档案，想约个视频面试。双胞胎比较辛苦，薪资可以谈。</div></div><div class="sysmsg"><span>雇主信用 B · 首次雇佣 · 已预付保证金</span></div>`;
+ return hdr(c.who,{back:true})+`<div class="body" style="padding-top:0">${m}</div><div class="sticky-bottom"><input id="chat-in" placeholder="发消息…" style="flex:1;min-width:0;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)"><button class="btn sm" data-act="send">发送</button></div>`;}
+
+function vEMe(){return hdr('我的',{act:['切换角色','switch']})+`<div class="body">
+ <div class="card"><div class="row"><div class="avatar lg" style="background:var(--accent)">徐</div><div class="grow"><span class="name" style="font-size:var(--fs-xl)">徐女士</span><div class="small muted">朝阳 望京 · 已实名</div></div></div></div>
+ <div class="card"><div class="row between"><h3>雇主信用 782</h3><span class="chip ok">A 级</span></div>
+  <div class="col" style="margin-top:12px;gap:9px">${[['准时付薪',30,30],['合同履约',25,25],['阿姨评价',24,25],['无纠纷',20,20]].map(([k,v,m])=>`<div class="credit-row"><span class="small" style="width:64px">${k}</span><div class="bar"><i style="width:${v/m*100}%"></i></div><b class="small num" style="width:40px;text-align:right">${v}/${m}</b></div>`).join('')}</div>
+  <div class="xs muted" style="margin-top:10px">信用 ≥ 700 免保证金，阿姨端可见等级与标签</div></div>
+ <div class="card" style="padding:6px 16px"><div class="list">${[['合同','1 份在用'],['保障与保险','意外险 + 雇主责任险'],['收费说明','介绍费 ¥0 · 服务费 8%'],['阿姨对我的评价','4.9 · 2 条'],['客服','2 小时内响应']].map(([k,v])=>`<button class="li" data-act="soon"><span class="grow">${k}</span><span class="small muted">${v}</span><span class="chev">›</span></button>`).join('')}</div></div>
+ <div class="demo-hint">示例数据 · 稳家 Demo</div>
+</div>`+tabbar();}
+
+/* ---------- 阿姨端 ---------- */
+function vAHome(){return hdr('<span class="brand">稳家</span> <span class="small muted" style="font-weight:500">阿姨端</span>',{act:['切换角色','switch']})+`<div class="body">
+ <button class="hero" data-act="tab" data-tab="me"><div class="row between"><div><div class="lbl">我的考核档案</div><div class="score num">812</div></div><div class="col" style="align-items:flex-end;gap:6px"><span class="pill">金牌 · 实操 92</span><span class="pill">核验 4/4</span></div></div></button>
+ <div class="card"><div class="row between"><h3>10 月收入</h3><span class="chip ok">11/5 发放</span></div>
+  <div class="row between" style="margin-top:10px"><span class="price num" style="font-size:var(--fs-2xl)">¥9,800</span><span class="small muted">在岗 26 天 · 报销 ¥300</span></div></div>
+ <div class="sec"><h2>待处理</h2><span class="chip bad">2</span></div>
+ <div class="card" style="padding:6px 16px"><div class="list">
+  <button class="li" data-act="emp" data-id="e3"><div class="avatar sm" style="background:#8A5A7A">林</div><div class="grow"><b>林女士发起互选</b><div class="small muted">西城 · 双胞胎 · ¥12,000 · 信用 B</div></div><span class="chev">›</span></button>
+  <button class="li" data-act="tab" data-tab="sched"><div class="avatar sm" style="background:var(--gold)">替</div><div class="grow"><b>10/17 替班交接</b><div class="small muted">李春梅早 8 点到岗，请准备交接清单</div></div><span class="chev">›</span></button></div></div>
+ <div class="sec"><h2>当前合同</h2><button class="link" data-act="tab" data-tab="sched">排班 ›</button></div>
+ <div class="card"><div class="row"><div class="avatar" style="background:#2F7F6D">徐</div><div class="grow"><div class="row"><span class="name">徐女士家</span><span class="chip ok">在岗第 47 天</span></div><div class="small muted">朝阳 望京 · 育儿嫂 · 周日休</div></div></div></div>
+</div>`+tabbar();}
+
+function empCard(e){const ap=S.applied[e.id];return `<button class="card tap" data-act="emp" data-id="${e.id}">
+ <div class="row"><div class="avatar" style="background:${e.color}">${ini(e.name)}</div><div class="grow"><div class="row"><span class="name">${e.name}</span>${creditChip(e.grade)}</div><div class="small muted">${e.area} · ${e.cat}</div></div><span class="price num">¥${e.pay.toLocaleString()}<span>/月</span></span></div>
+ <div class="small" style="margin-top:10px">${e.need}</div>
+ <div class="chips" style="margin-top:8px">${e.tags.map(t=>`<span class="chip ${e.grade==='C'?'bad':e.grade==='B'?'warn':'ok'}">${t}</span>`).join('')}${ap?'<span class="chip acc">已申请</span>':''}</div>
+</button>`;}
+function vAFind(){const cats=['全部',...CATS];const list=EMPLOYERS.filter(e=>S.filter==='全部'||e.cat===S.filter);return hdr('找雇主')+`<div class="body">
+ <div class="seg">${cats.map(c=>`<button class="${S.filter===c?'on':''}" data-act="filter" data-f="${c}">${c}</button>`).join('')}</div>
+ <div class="xs muted" style="padding:0 2px">${list.length} 个需求 · 雇主已实名，信用与历史评价公开</div>
+ ${list.map(empCard).join('')}
+</div>`+tabbar();}
+function vEmp(p){const e=EMPLOYERS.find(x=>x.id===p.id);const ap=S.applied[e.id];return hdr('雇主需求',{back:true,act:['发消息','chat-c3']})+`<div class="body">
+ <div class="card"><div class="row"><div class="avatar lg" style="background:${e.color}">${ini(e.name)}</div><div class="grow"><div class="row"><span class="name" style="font-size:var(--fs-xl)">${e.name}</span>${creditChip(e.grade)}</div><div class="small muted">${e.area} · 已实名</div></div><div class="col" style="align-items:flex-end;gap:0"><b class="num" style="font-size:var(--fs-xl)">${e.credit}</b><span class="xs muted">雇主信用</span></div></div>
+  <div class="chips" style="margin-top:12px">${e.tags.map(t=>`<span class="chip ${e.grade==='C'?'bad':e.grade==='B'?'warn':'ok'}">${t}</span>`).join('')}</div></div>
+ <div class="notice ${e.grade==='C'?'warn':''}">${I.shield}<div>${e.note}</div></div>
+ <div class="card"><h3>工作内容</h3><div style="margin-top:10px"><div class="kv"><span>品类</span><b>${e.cat}</b></div><div class="kv"><span>情况</span><b style="text-align:right">${e.need}</b></div><div class="kv"><span>月薪</span><b class="num">¥${e.pay.toLocaleString()}</b></div><div class="kv"><span>工资</span><b>平台代发 · 每月 5 日</b></div></div></div>
+ <div class="card"><h3>雇主履约</h3><div class="grid3" style="margin-top:12px"><div class="stat"><span class="v num">${e.months}<span class="small"> 月</span></span><span class="k">准时付薪</span></div><div class="stat"><span class="v num">${e.prevRating}</span><span class="k">阿姨评价</span></div><div class="stat"><span class="v num">${e.grade==='C'?'2':'0'}</span><span class="k">提前解约</span></div></div></div>
+</div><div class="sticky-bottom"><button class="btn" data-act="apply" data-id="${e.id}" ${ap?'disabled':''}>${ap?'已申请，等待回应':e.id==='e3'?'接受互选，约视频面试':'申请这份工作'}</button></div>`;}
+
+function vASched(){return hdr('我的排班')+`<div class="body">
+ <div class="card"><div class="row between"><h3>10 月 · 徐女士家</h3><span class="chip acc">周日休</span></div>
+  <div style="margin-top:12px">${calendar([17,18],'请假',S.leave?{days:[24,25],label:S.subOk?'已替':'待替'}:null)}</div>
+  <div class="legend" style="margin-top:12px"><span><i style="background:var(--accent-soft)"></i>在岗</span><span><i style="background:var(--surface2)"></i>休息</span><span><i style="background:var(--gold-soft)"></i>请假</span></div></div>
+ <div class="card"><h3>请假</h3><div class="list" style="margin-top:10px"><div class="li"><div class="grow"><b>10/17–18 回乡</b><div class="small muted">替班 李春梅（A 级）</div></div><span class="chip ok">已安排</span></div>
+  ${S.leave?`<div class="li"><div class="grow"><b>10/24–25 家中有事</b><div class="small muted">${S.subOk?'替班 周红（A 级）':'平台正在匹配替班…'}</div></div><span class="chip ${S.subOk?'ok':'warn'}">${S.subOk?'已安排':'匹配中'}</span></div>`:''}</div>
+  <div class="xs muted" style="margin-top:12px">请假不扣工资，替班由平台安排</div></div>
+</div><div class="sticky-bottom"><button class="btn" data-act="leave" ${S.leave?'disabled':''}>${S.leave?'本月已申请 2 次':'申请请假'}</button></div>`+tabbar();}
+
+function vAMe(){return hdr('我的',{act:['切换角色','switch']})+`<div class="body">
+ <div class="card"><div class="row"><div class="avatar lg" style="background:#2F7F6D">张</div><div class="grow"><div class="row"><span class="name" style="font-size:var(--fs-xl)">张秀兰</span><span class="chip gold">金牌</span></div><div class="small muted">育儿嫂 · 河北保定 · 2022 年签约</div></div></div>
+  <div class="ver-grid" style="margin-top:14px"><div class="ver"><span class="dot">✓</span>实名认证</div><div class="ver"><span class="dot">✓</span>公安核查</div><div class="ver"><span class="dot">✓</span>健康证 2026-08</div><div class="ver"><span class="dot">✓</span>实操考核 92</div></div></div>
+ <div class="card"><div class="row between"><h3>阿姨信用 812</h3><span class="xs muted">合同结束后更新</span></div>
+  <div class="col" style="margin-top:12px;gap:9px">${[['在岗稳定',29,30],['雇主评价',24,25],['准时打卡',25,25],['无纠纷',20,20]].map(([k,v,m])=>`<div class="credit-row"><span class="small" style="width:64px">${k}</span><div class="bar"><i style="width:${v/m*100}%"></i></div><b class="small num" style="width:40px;text-align:right">${v}/${m}</b></div>`).join('')}</div>
+  <div class="xs muted" style="margin-top:10px">信用归您本人，换雇主、换平台都带得走</div></div>
+ <div class="card" style="padding:6px 16px"><div class="list">
+  <button class="li" data-act="enroll"><span class="grow">考核中心</span><span class="small muted">10/25 长期照护师实操 · 可报名</span><span class="chev">›</span></button>
+  ${[['证书核验','2 已核验 · 1 待上传'],['合同','徐女士家 · 第 47 天'],['收入与报销','10 月 ¥9,800'],['保险','意外险 · 平台投保'],['我对雇主的评价','2 条']].map(([k,v])=>`<button class="li" data-act="soon"><span class="grow">${k}</span><span class="small muted">${v}</span><span class="chev">›</span></button>`).join('')}</div></div>
+ <div class="demo-hint">示例数据 · 稳家 Demo</div>
+</div>`+tabbar();}
+
+/* ---------- render ---------- */
+function render(){const v=document.getElementById('view');let html='';
+ if(!S.role)html=vSplash();
+ else if(S.stack.length){const t=S.stack[S.stack.length-1];html=({aunt:vAunt,post:vPost,chat:vChat,emp:vEmp})[t.view](t.params);}
+ else if(S.role==='employer')html=({home:vEHome,find:vEFind,sched:vESched,msgs:vMsgs,me:vEMe})[S.tab]();
+ else html=({home:vAHome,find:vAFind,sched:vASched,msgs:vMsgs,me:vAMe})[S.tab]();
+ v.innerHTML=html;v.className='screen'+(anim?' anim-'+anim:'');anim='';
+ const b=v.querySelector('.body');if(b)b.scrollTop=scrollMemo[curKey()]||0;}
+
+document.getElementById('app').addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
+ switch(a){
+  case 'role':S.role=el.dataset.role;S.tab='home';S.stack=[];anim='fade';render();break;
+  case 'switch':S.role=S.role==='employer'?'aunt':'employer';S.tab='home';S.stack=[];S.filter='全部';S.msgsSeen=false;anim='fade';render();toast(S.role==='employer'?'已切换到雇主端':'已切换到阿姨端');break;
+  case 'tab':setTab(el.dataset.tab);break;
+  case 'back':back();break;
+  case 'filter':S.filter=el.dataset.f;render();break;
+  case 'find-cat':S.filter=el.dataset.cat;setTab('find');break;
+  case 'aunt':go('aunt',{id:el.dataset.id});break;
+  case 'emp':go('emp',{id:el.dataset.id});break;
+  case 'chat':go('chat',{id:el.dataset.id});break;
+  case 'chat-c3':go('chat',{id:'c3'});break;
+  case 'post':S.form.step=0;go('post');break;
+  case 'opt':S.form[el.dataset.k]=el.dataset.v;if(el.dataset.k==='cat'){S.form.kid=CAT_Q[el.dataset.v][1][1];S.form.pay=PAY_REF[el.dataset.v][1][1];}render();break;
+  case 'step':S.form.step+=Number(el.dataset.d);render();break;
+  case 'submit':busy(el,700,()=>{back();toast('已发布，推送给 6 位匹配阿姨');});break;
+  case 'invite':{const au=AUNTS.find(x=>x.id===el.dataset.id);sheet(`<h3>向${au.name}发起互选</h3><div class="small muted">阿姨会看到您的雇主信用、工作内容和薪资，24 小时内回应。</div><div class="card" style="box-shadow:none;background:var(--surface2)"><div class="kv"><span>需求</span><b>${({'育儿嫂':'育儿嫂 · 宝宝 8 个月 · 住家','养老照护':'养老照护 · 父亲 78 岁 · 白班','住家保洁':'住家保洁 · 三居室 · 三餐 + 保洁'})[au.cat]}</b></div><div class="kv"><span>月薪</span><b class="num">${({'育儿嫂':'¥9,500','养老照护':'¥7,800','住家保洁':'¥7,500'})[au.cat]}</b></div><div class="kv"><span>您的信用</span><b>782 · A 级</b></div></div><button class="btn" data-act="invite-ok" data-id="${au.id}">发送邀请</button>`);break;}
+  case 'invite-ok':busy(el,600,()=>{S.invited[el.dataset.id]=true;closeSheet();render();toast('已发送，等待阿姨回应');});break;
+  case 'apply':{const em=EMPLOYERS.find(x=>x.id===el.dataset.id);sheet(`<h3>${em.id==='e3'?'接受互选':'申请这份工作'}</h3><div class="small muted">雇主会看到您的考核档案、履约记录和信用分。${em.grade==='C'?'该雇主已预付 1 个月工资到平台，您的工资有保障。':''}</div><button class="btn" data-act="apply-ok" data-id="${em.id}">${em.id==='e3'?'接受并约面试':'确认申请'}</button>`);break;}
+  case 'apply-ok':busy(el,600,()=>{S.applied[el.dataset.id]=true;closeSheet();render();toast('已提交，雇主 24 小时内回应');});break;
+  case 'leave':sheet(`<h3>申请请假</h3><div class="field"><label>日期</label><div class="opts"><button class="on">10/24 周六 – 10/25 周日</button></div></div><div class="field"><label>原因（雇主可见）</label><input id="leave-why" value="家中有事"></div><div class="small muted">雇主同意后，平台自动安排替班，不扣工资。</div><button class="btn" data-act="leave-ok">提交申请</button>`);break;
+  case 'leave-ok':busy(el,600,()=>{S.leave=true;closeSheet();render();toast('雇主已同意，正在匹配替班');});setTimeout(()=>{S.subOk=true;if(S.role==='aunt'&&S.tab==='sched'&&!S.stack.length)render();toast('替班已确认：周红（A 级）');},2600);break;
+  case 'enroll':toast('已报名 10/25 长期照护师实操考核');break;
+  case 'send':{const inp=document.getElementById('chat-in');if(inp&&inp.value.trim()){const b=document.querySelector('#view .body');b.insertAdjacentHTML('beforeend',`<div class="msg me"><div class="bub">${esc(inp.value)}</div></div>`);inp.value='';b.scrollTop=b.scrollHeight;}break;}
+  case 'sheet-close':closeSheet();break;
+  case 'soon':toast('Demo 中暂未实现');break;
+ }});
+render();
+</script>
+</body></html>
